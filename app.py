@@ -88,7 +88,7 @@ def get_openai_client():
         import openai
         thread_local.client = openai.OpenAI(
             base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-            api_key=os.environ["OPENAI_API_KEY"],
+            api_key=os.environ.get("OPENAI_API_KEY") or raise ValueError("OPENAI_API_KEY environment variable is required"),
             timeout=httpx.Timeout(connect=10, read=120, write=120, pool=10),
         )
         return thread_local.client
