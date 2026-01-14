@@ -123,3 +123,81 @@ class TestGetRelatedQuestions:
             questions = get_related_questions("test", [{"snippet": "context"}])
 
         assert questions == []
+
+
+class TestStopWordsLimit:
+    """Test that stop_words doesn't exceed OpenAI's limit of 4"""
+
+    def test_stop_words_max_four(self):
+        from app import stop_words
+        assert len(stop_words) <= 4, f"stop_words has {len(stop_words)} items, max is 4"
+
+
+class TestRelatedQuestionsFormat:
+    """Test that related questions are formatted correctly for frontend"""
+
+    @patch("app.search_with_serper")
+    @patch("app.get_openai_client")
+    @patch("app.executor")
+    def test_related_questions_format(self, mock_executor, mock_client, mock_search):
+        mock_search.return_value = [
+            {"name": "Test", "url": "https://test.com", "snippet": "Test snippet"}
+        ]
+        
+        # Mock LLM streaming response
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(delta=MagicMock(content="Answer"))]
+        mock_client.return_value.chat.completions.create.return_value = iter([mock_completion])
+        
+        # Mock related questions future
+        mock_future = MagicMock()
+        mock_future.result.return_value = ["1. Question one?", "2. Question two?"]
+        mock_executor.submit.return_value = mock_future
+
+        with patch.dict("os.environ", {"SERPER_SEARCH_API_KEY": "fake_key", "OPENAI_API_KEY": "fake_key"}):
+            response = client.post("/query", json={
+                "query": "test",
+                "search_uuid": "test-uuid",
+                "generate_related_questions": True
+            })
+
+        assert response.status_code == 200
+        content = response.text
+        
+        if "__RELATED_QUESTIONS__" in content:
+            related_part = content.split("__RELATED_QUESTIONS__")[1].strip()
+            related_data = json.loads(related_part)
+            # Check format is [{question: string}]
+            for item in related_data:
+                assert "question" in item, "Related question should have 'question' key"
+                assert isinstance(item["question"], str), "Question should be a string"
+                # Check numbering is stripped
+                assert not item["question"].startswith("1."), "Numbering should be stripped"
+                assert not item["question"].startswith("2."), "Numbering should be stripped"
+
+
+class TestBranding:
+    """Test that branding is Evidence Search, not Lepton"""
+
+    def test_search_placeholder_branding(self):
+        with open("web/src/app/components/search.tsx", "r") as f:
+            content = f.read()
+        assert "Evidence Search" in content, "Search placeholder should mention Evidence Search"
+        assert "Lepton" not in content, "Search should not mention Lepton"
+
+    def test_layout_title_branding(self):
+        with open("web/src/app/layout.tsx", "r") as f:
+            content = f.read()
+        assert "Evidence Search" in content, "Page title should be Evidence Search"
+        assert "Lepton" not in content, "Layout should not mention Lepton"
+
+    def test_logo_branding(self):
+        with open("web/src/app/components/logo.tsx", "r") as f:
+            content = f.read()
+        assert "Evidence Search" in content, "Logo should show Evidence Search"
+        assert "Lepton Search" not in content, "Logo should not show Lepton Search"
+
+    def test_footer_branding(self):
+        with open("web/src/app/components/footer.tsx", "r") as f:
+            content = f.read()
+        assert "Lepton" not in content, "Footer should not mention Lepton"
