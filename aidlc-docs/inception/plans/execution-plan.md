@@ -117,3 +117,4 @@ flowchart TD
   - 搜索功能正常工作
   - LLM回答正常生成
   - Docker容器可正常启动
+  - API错误响应格式保持兼容
