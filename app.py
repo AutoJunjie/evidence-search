@@ -129,8 +129,10 @@ def raw_stream_response(contexts, llm_response, related_questions_future) -> Gen
             yield chunk.choices[0].delta.content or ""
     if related_questions_future is not None:
         related_questions = related_questions_future.result()
+        # Convert to {question: string}[] format for frontend, strip numbering and dashes
+        related_objects = [{"question": q.lstrip("0123456789.- ").strip()} for q in related_questions]
         yield "\n\n__RELATED_QUESTIONS__\n\n"
-        yield json.dumps(related_questions)
+        yield json.dumps(related_objects)
 
 
 class QueryRequest(BaseModel):
