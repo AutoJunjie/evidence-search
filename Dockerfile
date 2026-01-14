@@ -10,6 +10,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
-COPY --from=frontend-builder /app/ui ./ui
+COPY --from=frontend-builder /app/web/out ./ui
 EXPOSE 8080
 CMD ["python", "app.py"]
