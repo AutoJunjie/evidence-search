@@ -82,3 +82,4 @@
 | LLM_MODEL | 否 | 模型名称（默认gpt-3.5-turbo） |
 | SERPER_SEARCH_API_KEY | 是 | Serper API密钥 |
 | RELATED_QUESTIONS | 否 | 是否生成相关问题（默认true） |
+| PORT | 否 | 服务端口（默认8080） |
