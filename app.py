@@ -98,7 +98,7 @@ def get_openai_client():
 
 
 executor = concurrent.futures.ThreadPoolExecutor(max_workers=32)
-model = os.environ.get("LLM_MODEL", "gpt-3.5-turbo")
+model = os.environ.get("LLM_MODEL", "gpt-4o-mini")
 should_do_related_questions = os.environ.get("RELATED_QUESTIONS", "true").lower() == "true"
 
 
