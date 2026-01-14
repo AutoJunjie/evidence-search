@@ -43,7 +43,7 @@ Here are the contexts of the question:
 Remember, based on the original question and related contexts, suggest three such further questions. Do NOT repeat the original question. Each related question should be no longer than 20 words. Here is the original question:
 """
 
-stop_words = ["<|im_end|>", "[End]", "[end]", "\nReferences:\n", "\nSources:\n", "End."]
+stop_words = ["<|im_end|>", "[End]", "[end]", "\nReferences:\n"]
 
 
 def search_with_serper(query: str, subscription_key: str):
@@ -98,7 +98,7 @@ def get_openai_client():
 
 
 executor = concurrent.futures.ThreadPoolExecutor(max_workers=32)
-model = os.environ.get("LLM_MODEL", "gpt-3.5-turbo")
+model = os.environ.get("LLM_MODEL", "gpt-4o-mini")
 should_do_related_questions = os.environ.get("RELATED_QUESTIONS", "true").lower() == "true"
 
 
@@ -129,8 +129,10 @@ def raw_stream_response(contexts, llm_response, related_questions_future) -> Gen
             yield chunk.choices[0].delta.content or ""
     if related_questions_future is not None:
         related_questions = related_questions_future.result()
+        # Convert to {question: string}[] format for frontend, strip numbering and dashes
+        related_objects = [{"question": q.lstrip("0123456789.- ").strip()} for q in related_questions]
         yield "\n\n__RELATED_QUESTIONS__\n\n"
-        yield json.dumps(related_questions)
+        yield json.dumps(related_objects)
 
 
 class QueryRequest(BaseModel):
