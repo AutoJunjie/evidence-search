@@ -141,7 +141,10 @@ def query_function(request: QueryRequest) -> StreamingResponse:
     query = request.query or _default_query
     query = re.sub(r"\[/?INST\]", "", query)
     
-    contexts = search_with_serper(query, os.environ["SERPER_SEARCH_API_KEY"])
+    serper_key = os.environ.get("SERPER_SEARCH_API_KEY")
+    if not serper_key:
+        raise HTTPException(500, "SERPER_SEARCH_API_KEY environment variable is required")
+    contexts = search_with_serper(query, serper_key)
     
     system_prompt = _rag_query_text.format(
         context="\n\n".join([f"[[citation:{i+1}]] {c['snippet']}" for i, c in enumerate(contexts)])
