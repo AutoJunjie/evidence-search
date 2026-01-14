@@ -15,6 +15,7 @@
 - [ ] Implement streaming response
 - [ ] Implement related questions generation
 - [ ] Mount static files for frontend
+- [ ] Implement error handling middleware for API compatibility
 
 ### Step 2: Create Python Dependencies (requirements.txt)
 - [ ] Create `requirements.txt` with minimal dependencies
