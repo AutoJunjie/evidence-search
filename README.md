@@ -1,92 +1,66 @@
-<div align="center">
-<h1 align="center">Search with Lepton</h1>
-Build your own conversational search engine using less than 500 lines of code.
-<br/>
-<a href="https://search.lepton.run/" target="_blank"> Live Demo </a>
-<br/>
-<img width="70%" src="https://github.com/leptonai/search_with_lepton/assets/1506722/845d7057-02cd-404e-bbc7-60f4bae89680">
-</div>
+# Evidence Search
 
+A conversational search engine powered by RAG (Retrieval-Augmented Generation).
 
 ## Features
-- Built-in support for LLM
-- Built-in support for search engine
-- Customizable pretty UI interface
-- Shareable, cached search results
+- Search powered by Serper API (Google Search)
+- AI-generated answers with citations using OpenAI
+- Related questions suggestions
+- Docker containerized deployment
 
-## Setup Search Engine API
-There are two default supported search engines: Bing and Google.
- 
-### Bing Search
-To use the Bing Web Search API, please visit [this link](https://www.microsoft.com/en-us/bing/apis/bing-web-search-api) to obtain your Bing subscription key.
+## Quick Start (Docker)
 
-### Google Search
-You have three options for Google Search: you can use the [SearchApi Google Search API](https://www.searchapi.io/) from SearchApi, [Serper Google Search API](https://serper.dev) from Serper, or opt for the [Programmable Search Engine](https://developers.google.com/custom-search) provided by Google.
-
-## Setup LLM and KV
-
-> [!NOTE]
-> We recommend using the built-in llm and kv functions with Lepton. 
-> Running the following commands to set up them automatically.
-
-```shell
-pip install -U leptonai openai && lep login
+1. Create `.env` file:
+```bash
+OPENAI_API_KEY=your_openai_api_key
+SERPER_SEARCH_API_KEY=your_serper_api_key
 ```
 
-## Obtain Your Lepton AI Workspace Token
-You can copy your workspace toke from the Lepton AI Dashboard &rarr; Settings &rarr; Tokens.
-
-
-## Build
-
-1. Set Bing subscription key
-```shell
-export BING_SEARCH_V7_SUBSCRIPTION_KEY=YOUR_BING_SUBSCRIPTION_KEY
-```
-2. Set Lepton AI workspace token
-```shell
-export LEPTON_WORKSPACE_TOKEN=YOUR_LEPTON_WORKSPACE_TOKEN
-```
-3. Build web
-```shell
-cd web && npm install && npm run build
-```
-4. Run server
-```shell
-BACKEND=BING python search_with_lepton.py
+2. Run:
+```bash
+docker-compose up --build
 ```
 
-For Google Search using SearchApi:
-```shell
-export SEARCHAPI_API_KEY=YOUR_SEARCHAPI_API_KEY
-BACKEND=SEARCHAPI python search_with_lepton.py
+3. Open http://localhost:8080
+
+## Manual Setup
+
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+
+### Backend
+```bash
+pip install -r requirements.txt
+export OPENAI_API_KEY=your_openai_api_key
+export SERPER_SEARCH_API_KEY=your_serper_api_key
+python app.py
 ```
 
-For Google Search using Serper:
-```shell
-export SERPER_SEARCH_API_KEY=YOUR_SERPER_API_KEY
-BACKEND=SERPER python search_with_lepton.py
+### Frontend (Development)
+```bash
+cd web
+npm install
+npm run dev
 ```
 
-For Google Search using Programmable Search Engine:
-```shell
-export GOOGLE_SEARCH_API_KEY=YOUR_GOOGLE_SEARCH_API_KEY
-export GOOGLE_SEARCH_CX=YOUR_GOOGLE_SEARCH_ENGINE_ID
-BACKEND=GOOGLE python search_with_lepton.py
+### Frontend (Production Build)
+```bash
+cd web
+npm install
+npm run build
 ```
+The build output will be in `ui/` directory.
 
+## Environment Variables
 
+| Variable | Required | Description |
+|----------|----------|-------------|
+| OPENAI_API_KEY | Yes | OpenAI API key |
+| SERPER_SEARCH_API_KEY | Yes | Serper API key |
+| OPENAI_BASE_URL | No | Custom OpenAI API endpoint |
+| LLM_MODEL | No | Model name (default: gpt-3.5-turbo) |
+| RELATED_QUESTIONS | No | Generate related questions (default: true) |
 
-## Deploy
-
-You can deploy this to Lepton AI with one click:
-
-[![Deploy with Lepton AI](https://github.com/leptonai/search_with_lepton/assets/1506722/bbd40afa-69ee-4acb-8974-d060880a183a)](https://dashboard.lepton.ai/workspace-redirect/explore/detail/search-by-lepton)
-
-You can also deploy your own version via
-
-```shell
-lep photon run -n search-with-lepton-modified -m search_with_lepton.py --env BACKEND=BING --env BING_SEARCH_V7_SUBSCRIPTION_KEY=YOUR_BING_SUBSCRIPTION_KEY
-```
-
-Learn more about `lep photon` [here](https://www.lepton.ai/docs/references/lep_photon).
+## License
+Apache 2.0
