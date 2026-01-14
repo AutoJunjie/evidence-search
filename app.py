@@ -43,7 +43,7 @@ Here are the contexts of the question:
 Remember, based on the original question and related contexts, suggest three such further questions. Do NOT repeat the original question. Each related question should be no longer than 20 words. Here is the original question:
 """
 
-stop_words = ["<|im_end|>", "[End]", "[end]", "\nReferences:\n", "\nSources:\n", "End."]
+stop_words = ["<|im_end|>", "[End]", "[end]", "\nReferences:\n"]
 
 
 def search_with_serper(query: str, subscription_key: str):
