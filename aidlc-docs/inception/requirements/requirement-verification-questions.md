@@ -50,7 +50,7 @@ B) 是，移除品牌标识但不替换
 C) 否，保留原样
 D) Other (请在下方描述)
 
-[Answer]: C
+[Answer]: A - Evidence Search
 
 ---
 
