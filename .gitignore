@@ -198,3 +198,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Build artifacts
+ui/
+.venv/
+__pycache__/
+*.pyc
