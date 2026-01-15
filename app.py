@@ -5,12 +5,30 @@ import re
 import threading
 from typing import Generator, List, Optional
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import httpx
 import requests
+
+# Strands SDK imports
+from strands import Agent
+from strands.models.openai import OpenAIModel
+from strands_tools import calculator, python_repl, http_request
+
+
+# Structured output model for related questions
+class RelatedQuestions(BaseModel):
+    """相关问题的结构化输出模型"""
+    questions: List[str] = Field(
+        description="3-5 related follow-up questions, each no longer than 20 words",
+        min_length=1,
+        max_length=5
+    )
 
 # Constants
 SERPER_SEARCH_ENDPOINT = "https://google.serper.dev/search"
@@ -80,59 +98,140 @@ app = FastAPI()
 
 thread_local = threading.local()
 
-
-def get_openai_client():
-    try:
-        return thread_local.client
-    except AttributeError:
-        import openai
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("OPENAI_API_KEY environment variable is required")
-        thread_local.client = openai.OpenAI(
-            base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-            api_key=api_key,
-            timeout=httpx.Timeout(connect=10, read=120, write=120, pool=10),
-        )
-        return thread_local.client
-
-
-executor = concurrent.futures.ThreadPoolExecutor(max_workers=32)
-model = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+# Model configuration
+model_id = os.environ.get("LLM_MODEL", "gpt-4o-mini")
 should_do_related_questions = os.environ.get("RELATED_QUESTIONS", "true").lower() == "true"
 
 
-def get_related_questions(query: str, contexts: list) -> List[str]:
+def get_main_response_agent():
+    """Get or create the main response Strands Agent with community tools."""
     try:
-        response = get_openai_client().chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": _more_questions_prompt.format(context="\n\n".join([c["snippet"] for c in contexts]))},
-                {"role": "user", "content": query},
-            ],
-            max_tokens=512,
+        return thread_local.main_agent
+    except AttributeError:
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+        
+        model = OpenAIModel(
+            client_args={"api_key": api_key},
+            model_id=model_id,
+            params={
+                "max_tokens": 1024,
+                "temperature": 0.9,
+                "stop": stop_words[:4],  # OpenAI max 4 stop sequences
+            }
         )
-        content = response.choices[0].message.content or ""
-        questions = [q.strip() for q in content.split("\n") if q.strip() and "?" in q]
-        return questions[:3]
-    except Exception:
+        
+        thread_local.main_agent = Agent(
+            model=model,
+            tools=[calculator, python_repl, http_request],
+        )
+        return thread_local.main_agent
+
+
+def get_related_questions_agent():
+    """Get or create the related questions Strands Agent."""
+    try:
+        return thread_local.related_agent
+    except AttributeError:
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+        
+        model = OpenAIModel(
+            client_args={"api_key": api_key},
+            model_id=model_id,
+            params={
+                "max_tokens": 512,
+                "temperature": 0.7,
+            }
+        )
+        
+        thread_local.related_agent = Agent(model=model)
+        return thread_local.related_agent
+
+
+executor = concurrent.futures.ThreadPoolExecutor(max_workers=32)
+
+
+def get_related_questions(query: str, contexts: list) -> List[str]:
+    """
+    Gets related questions based on the query and context using Strands structured output.
+    """
+    try:
+        # Build context string
+        context_str = "\n\n".join([c.get("snippet", "") for c in contexts])
+        
+        # Build system prompt
+        system_prompt = _more_questions_prompt.format(context=context_str)
+        
+        # Create agent with system prompt
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
+        
+        model = OpenAIModel(
+            client_args={"api_key": api_key},
+            model_id=model_id,
+            params={
+                "max_tokens": 512,
+                "temperature": 0.7,
+            }
+        )
+        
+        agent = Agent(model=model, system_prompt=system_prompt)
+        
+        # Call agent with structured output
+        result = agent(query, structured_output_model=RelatedQuestions)
+        
+        # Return questions list (same format as before)
+        return result.structured_output.questions[:5]
+        
+    except Exception as e:
+        print(f"Error generating related questions: {e}")
         return []
 
 
-def raw_stream_response(contexts, llm_response, related_questions_future) -> Generator[str, None, None]:
+async def raw_stream_response(contexts, agent, system_prompt, query, related_questions_future):
     yield json.dumps(contexts)
     yield "\n\n__LLM_RESPONSE__\n\n"
     if not contexts:
         yield "(The search engine returned nothing for this query. Please take the answer with a grain of salt.)\n\n"
-    for chunk in llm_response:
-        if chunk.choices:
-            yield chunk.choices[0].delta.content or ""
+    
+    # Stream response from Strands Agent using async streaming
+    try:
+        # Combine system prompt and query
+        full_prompt = f"{system_prompt}\n\n{query}"
+        
+        # Use stream_async for async streaming
+        async for event in agent.stream_async(full_prompt):
+            # Strands stream_async yields event dictionaries with nested structure
+            if isinstance(event, dict):
+                # Extract text from contentBlockDelta events
+                if "event" in event and "contentBlockDelta" in event["event"]:
+                    delta = event["event"]["contentBlockDelta"].get("delta", {})
+                    if "text" in delta:
+                        yield delta["text"]
+            elif isinstance(event, str):
+                yield event
+    except Exception as e:
+        yield f"Error generating response: {str(e)}"
+    
+    # Wait for related questions to complete
     if related_questions_future is not None:
-        related_questions = related_questions_future.result()
-        # Convert to {question: string}[] format for frontend, strip numbering and dashes
-        related_objects = [{"question": q.lstrip("0123456789.- ").strip()} for q in related_questions]
-        yield "\n\n__RELATED_QUESTIONS__\n\n"
-        yield json.dumps(related_objects)
+        try:
+            # Use asyncio.wrap_future to properly await ThreadPoolExecutor future
+            import asyncio
+            related_questions = await asyncio.wrap_future(related_questions_future)
+            
+            # Convert to {question: string}[] format for frontend
+            related_objects = [{"question": q} for q in related_questions]
+            yield "\n\n__RELATED_QUESTIONS__\n\n"
+            yield json.dumps(related_objects)
+        except Exception as e:
+            # If related questions fail, still send empty array
+            yield "\n\n__RELATED_QUESTIONS__\n\n"
+            yield json.dumps([])
 
 
 class QueryRequest(BaseModel):
@@ -156,25 +255,17 @@ def query_function(request: QueryRequest) -> StreamingResponse:
     )
     
     try:
-        client = get_openai_client()
-        llm_response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": query},
-            ],
-            max_tokens=1024,
-            stop=stop_words,
-            stream=True,
-            temperature=0.9,
-        )
+        agent = get_main_response_agent()
         related_questions_future = None
         if should_do_related_questions and request.generate_related_questions:
             related_questions_future = executor.submit(get_related_questions, query, contexts)
-    except Exception:
-        raise HTTPException(503, "Internal server error.")
+    except Exception as e:
+        raise HTTPException(503, f"Strands Agent initialization error: {str(e)}")
     
-    return StreamingResponse(raw_stream_response(contexts, llm_response, related_questions_future), media_type="text/html")
+    return StreamingResponse(
+        raw_stream_response(contexts, agent, system_prompt, query, related_questions_future),
+        media_type="text/html"
+    )
 
 
 @app.get("/")

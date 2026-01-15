@@ -4,16 +4,28 @@ A conversational search engine powered by RAG (Retrieval-Augmented Generation).
 
 ## Features
 - Search powered by Serper API (Google Search)
-- AI-generated answers with citations using OpenAI
+- AI-generated answers with citations using Strands Agents SDK
+- Support for multiple LLM providers (Bedrock, Anthropic, OpenAI, Gemini)
 - Related questions suggestions
 - Docker containerized deployment
+
+> **Note**: This project now uses Strands Agents SDK instead of direct OpenAI integration. See [STRANDS_MIGRATION.md](STRANDS_MIGRATION.md) for migration details.
 
 ## Quick Start (Docker)
 
 1. Create `.env` file:
 ```bash
-OPENAI_API_KEY=your_openai_api_key
+# Using Bedrock (default, recommended)
+AWS_BEDROCK_API_KEY=your_bedrock_api_key
 SERPER_SEARCH_API_KEY=your_serper_api_key
+MODEL_PROVIDER=bedrock
+LLM_MODEL=anthropic.claude-sonnet-4-20250514-v1:0
+
+# Or using OpenAI
+# OPENAI_API_KEY=your_openai_api_key
+# SERPER_SEARCH_API_KEY=your_serper_api_key
+# MODEL_PROVIDER=openai
+# LLM_MODEL=gpt-4o-mini
 ```
 
 2. Run:
@@ -32,9 +44,19 @@ docker-compose up --build
 ### Backend
 ```bash
 pip install -r requirements.txt
-export OPENAI_API_KEY=your_openai_api_key
+
+# Using Bedrock (default)
+export AWS_BEDROCK_API_KEY=your_bedrock_api_key
 export SERPER_SEARCH_API_KEY=your_serper_api_key
-python app.py
+export MODEL_PROVIDER=bedrock
+python app_strands.py
+
+# Or using OpenAI
+# export OPENAI_API_KEY=your_openai_api_key
+# export SERPER_SEARCH_API_KEY=your_serper_api_key
+# export MODEL_PROVIDER=openai
+# pip install 'strands-agents[openai]'
+# python app_strands.py
 ```
 
 ### Frontend (Development)
