@@ -53,7 +53,10 @@ Successfully migrated "search_with_lepton" from Lepton AI SaaS platform to stand
 
 ### Added
 - FastAPI web framework
-- Direct OpenAI API integration
+- Strands Agents SDK for LLM orchestration
+- Structured output for related questions
+- Community tools (calculator, python_repl, http_request)
+- Async streaming with stream_async
 - Serper API (only search backend)
 - Docker containerization
 
@@ -72,7 +75,8 @@ Successfully migrated "search_with_lepton" from Lepton AI SaaS platform to stand
 1. **PR #1**: Reverse engineering docs
 2. **PR #2**: Requirements and planning
 3. **PR #3**: Main implementation (merged)
-4. **PR #4**: Post-development fixes (pending)
+4. **PR #4**: Post-development fixes (merged)
+5. **PR #5**: Strands Agents SDK migration (merged)
 
 ## Success Metrics
 ✅ No leptonai dependencies
@@ -81,6 +85,7 @@ Successfully migrated "search_with_lepton" from Lepton AI SaaS platform to stand
 ✅ Docker deployment ready
 ✅ Complete rebranding
 ✅ Functional parity maintained
+✅ Strands Agents SDK integration
 
 ## Usage
 ```bash

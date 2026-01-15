@@ -41,7 +41,7 @@
 ## Execution Summary
 
 ### Deliverables
-- **Backend**: app.py (FastAPI, 188 lines)
+- **Backend**: app.py (FastAPI + Strands Agents SDK, 285 lines)
 - **Frontend**: Rebranded to Evidence Search
 - **Tests**: 14 unit/functional tests (all passing)
 - **Docker**: Dockerfile + docker-compose.yml
@@ -51,12 +51,17 @@
 - **PR #1**: Reverse engineering documentation
 - **PR #2**: Requirements analysis and execution plan
 - **PR #3**: Main implementation (merged to main)
-- **PR #4**: Post-development fixes
+- **PR #4**: Post-development fixes (merged)
   - Fixed stop_words limit (OpenAI max 4)
   - Fixed related questions format
   - Completed Evidence Search rebranding
   - Changed default model to gpt-4o-mini
   - Added functional tests
+- **PR #5**: Strands Agents SDK migration (merged)
+  - Replaced direct OpenAI client with Strands Agent
+  - Added structured output for related questions
+  - Integrated community tools (calculator, python_repl, http_request)
+  - Async streaming with stream_async
 
 ### Key Changes
 - Removed leptonai dependency → FastAPI
@@ -64,6 +69,7 @@
 - Kept only Serper API for search
 - Rebranded to "Evidence Search"
 - Docker containerized deployment
+- Migrated to Strands Agents SDK
 
 ## Artifacts Location
 - **Reverse Engineering**: aidlc-docs/inception/reverse-engineering/
