@@ -66,15 +66,16 @@ class TestQueryEndpoint:
     """Tests for /query endpoint"""
 
     @patch("app.search_with_serper")
-    @patch("app.get_openai_client")
-    def test_query_endpoint_success(self, mock_client, mock_search):
+    @patch("app.get_main_response_agent")
+    def test_query_endpoint_success(self, mock_get_agent, mock_search):
         mock_search.return_value = [
             {"name": "Test", "url": "https://test.com", "snippet": "Test snippet"}
         ]
         
-        mock_completion = MagicMock()
-        mock_completion.choices = [MagicMock(delta=MagicMock(content="Test answer"))]
-        mock_client.return_value.chat.completions.create.return_value = iter([mock_completion])
+        # Mock the Strands Agent
+        mock_agent = MagicMock()
+        mock_agent.stream.return_value = iter(["Test ", "answer"])
+        mock_get_agent.return_value = mock_agent
 
         with patch.dict("os.environ", {"SERPER_SEARCH_API_KEY": "fake_key", "OPENAI_API_KEY": "fake_key"}):
             response = client.post("/query", json={
@@ -104,20 +105,21 @@ class TestIndexEndpoint:
 class TestGetRelatedQuestions:
     """Tests for get_related_questions function"""
 
-    @patch("app.get_openai_client")
-    def test_get_related_questions_success(self, mock_client):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock(message=MagicMock(content="Question 1?\nQuestion 2?\nQuestion 3?"))]
-        mock_client.return_value.chat.completions.create.return_value = mock_response
+    @patch("app.get_related_questions_agent")
+    def test_get_related_questions_success(self, mock_get_agent):
+        # Mock the Strands Agent
+        mock_agent = MagicMock()
+        mock_agent.return_value = "Question 1?\nQuestion 2?\nQuestion 3?"
+        mock_get_agent.return_value = mock_agent
 
         with patch.dict("os.environ", {"OPENAI_API_KEY": "fake_key"}):
             questions = get_related_questions("test", [{"snippet": "context"}])
 
         assert len(questions) == 3
 
-    @patch("app.get_openai_client")
-    def test_get_related_questions_error_returns_empty(self, mock_client):
-        mock_client.return_value.chat.completions.create.side_effect = Exception("API Error")
+    @patch("app.get_related_questions_agent")
+    def test_get_related_questions_error_returns_empty(self, mock_get_agent):
+        mock_get_agent.side_effect = Exception("API Error")
 
         with patch.dict("os.environ", {"OPENAI_API_KEY": "fake_key"}):
             questions = get_related_questions("test", [{"snippet": "context"}])
@@ -137,17 +139,17 @@ class TestRelatedQuestionsFormat:
     """Test that related questions are formatted correctly for frontend"""
 
     @patch("app.search_with_serper")
-    @patch("app.get_openai_client")
+    @patch("app.get_main_response_agent")
     @patch("app.executor")
-    def test_related_questions_format(self, mock_executor, mock_client, mock_search):
+    def test_related_questions_format(self, mock_executor, mock_get_agent, mock_search):
         mock_search.return_value = [
             {"name": "Test", "url": "https://test.com", "snippet": "Test snippet"}
         ]
         
-        # Mock LLM streaming response
-        mock_completion = MagicMock()
-        mock_completion.choices = [MagicMock(delta=MagicMock(content="Answer"))]
-        mock_client.return_value.chat.completions.create.return_value = iter([mock_completion])
+        # Mock main agent streaming response
+        mock_agent = MagicMock()
+        mock_agent.stream.return_value = iter(["Answer"])
+        mock_get_agent.return_value = mock_agent
         
         # Mock related questions future
         mock_future = MagicMock()
