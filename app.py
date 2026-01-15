@@ -260,7 +260,7 @@ def query_function(request: QueryRequest) -> StreamingResponse:
         if should_do_related_questions and request.generate_related_questions:
             related_questions_future = executor.submit(get_related_questions, query, contexts)
     except Exception as e:
-        raise HTTPException(503, f"Strands Agent initialization error: {str(e)}")
+        raise HTTPException(503, "Failed to initialize Strands Agent")
     
     return StreamingResponse(
         raw_stream_response(contexts, agent, system_prompt, query, related_questions_future),
